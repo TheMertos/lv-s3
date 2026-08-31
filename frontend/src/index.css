@@ -1,0 +1,29 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+html,
+body,
+#root {
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+::selection {
+  background-color: color-mix(in srgb, var(--mantine-color-lv-4) 35%, transparent);
+}
+
+/** Void + cyan glow backdrop behind the login card (matches product logo). */
+.lv-login-backdrop {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-color: #000000;
+  background-image:
+    radial-gradient(ellipse 90% 70% at 50% -40%, color-mix(in srgb, var(--mantine-color-lv-4) 28%, transparent), transparent 55%),
+    radial-gradient(ellipse 60% 50% at 100% 0%, color-mix(in srgb, var(--mantine-color-lv-7) 22%, transparent), transparent 50%),
+    radial-gradient(ellipse 50% 45% at 0% 100%, color-mix(in srgb, var(--mantine-color-lv-8) 18%, transparent), transparent 50%);
+}

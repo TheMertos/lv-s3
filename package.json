@@ -1,0 +1,33 @@
+{
+  "name": "lv-s3",
+  "private": true,
+  "license": "MIT",
+  "version": "0.1.0",
+  "homepage": "https://github.com/TheMertos/lv-s3",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/TheMertos/lv-s3.git"
+  },
+  "bugs": {
+    "url": "https://github.com/TheMertos/lv-s3/issues"
+  },
+  "scripts": {
+    "dev": "concurrently -k -n backend,frontend -c blue,magenta \"yarn --cwd backend start:dev\" \"npm run dev --prefix frontend\"",
+    "start": "yarn dev",
+    "dev:backend": "yarn --cwd backend start:dev",
+    "dev:frontend": "npm run dev --prefix frontend",
+    "build": "yarn --cwd backend build && npm run build --prefix frontend",
+    "build:backend": "yarn --cwd backend build",
+    "build:frontend": "npm run build --prefix frontend",
+    "install:all": "yarn --cwd backend install && npm install --prefix frontend",
+    "test": "node --test scripts/release.spec.mjs && yarn --cwd backend test && yarn --cwd backend test:e2e && npm test --prefix frontend",
+    "test:e2e": "playwright test -c e2e/playwright.config.ts",
+    "release": "node scripts/release.mjs",
+    "release:dry": "node scripts/release.mjs --dry-run"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.61.1",
+    "concurrently": "^9.1.2"
+  },
+  "packageManager": "yarn@4.14.0+sha512.31053dd4c730c75e8665ad00bbfe07a7bed08aef54c5edfd8d484463680180b1c87035a61b9e15ff2cad310a329176cac433009e2d402ac69d1386f9445d7ccb"
+}

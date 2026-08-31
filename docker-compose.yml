@@ -1,0 +1,141 @@
+# Single image: S3 (9000) + Admin API + static UI (9001)
+# Expects a local image (e.g. docker build or import-image.sh → lv-s3:latest).
+#
+# Env: copy .env.docker.example → .env (production secrets). Do not use S3_ROOT_* here —
+# those are dev-only (backend/.env.example); validateEnv rejects them when NODE_ENV=production.
+#
+# Database (default): SQLite at DATABASE_PATH under the ./lv_s3_data volume.
+# Optional Postgres: start the `postgres` service and set DATABASE_URL on `api` (see comments
+# below). When DATABASE_URL is set, DATABASE_PATH is ignored.
+#
+# Encryption: Compose does not encrypt volumes. For production, put ./lv_s3_data and the
+# Postgres data dir (lv_s3_pg) on encrypted host/cloud disks.
+#
+# Optional Redis (profile `redis`): shared lockout/throttle hot path when REDIS_URL is set on
+# `api`. Default without Redis still shares state via the DB table.
+#
+# Optional ClamAV (profile `clamav`): malware scan before publish when MALWARE_SCANNER=clamav
+# on `api`. Default MALWARE_SCANNER=off skips scan.
+
+services:
+  api:
+    image: lv-s3:${LV_S3_IMAGE_TAG:-latest}
+    pull_policy: never
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      NODE_ENV: production
+      # Override dev-only keys from a shared .env copied from backend/.env.example
+      S3_ROOT_ACCESS_KEY: ""
+      S3_ROOT_SECRET_KEY: ""
+      TYPEORM_SYNC: "false"
+      DATABASE_PATH: /data/app.db
+      # Postgres (optional): uncomment and start `postgres` service; remove or leave DATABASE_PATH unset.
+      # DATABASE_URL: postgres://lvs3:${POSTGRES_PASSWORD:-lvs3}@postgres:5432/lvs3
+      # Redis (optional): uncomment and start `redis` service (profile `redis`).
+      # REDIS_URL: redis://redis:6379/0
+      # REDIS_KEY_PREFIX: lv-s3:
+      # ClamAV (optional): uncomment and start `clamav` service (profile `clamav`).
+      # MALWARE_SCANNER: clamav
+      # CLAMAV_HOST: clamav
+      # CLAMAV_PORT: "3310"
+      # Object bytes (+ SQLite when DATABASE_PATH is used). Encrypt the host path behind ./lv_s3_data.
+      STORAGE_ROOT: /data/storage
+      ADMIN_PORT: "9001"
+      S3_PORT: "9000"
+      # First boot: creates admin login (must match E2E ADMIN_USERNAME if you run tests)
+      ADMIN_BOOTSTRAP_USERNAME: ${ADMIN_BOOTSTRAP_USERNAME:-admin}
+      ADMIN_BOOTSTRAP_PASSWORD: ${ADMIN_BOOTSTRAP_PASSWORD}
+      # Automatic lifecycle execution (object expiration + stale multipart cleanup)
+      LIFECYCLE_RUNNER_ENABLED: ${LIFECYCLE_RUNNER_ENABLED:-true}
+      LIFECYCLE_RUNNER_INTERVAL_MS: ${LIFECYCLE_RUNNER_INTERVAL_MS:-60000}
+      BROWSER_REDIRECT_URL: ${BROWSER_REDIRECT_URL:-http://localhost:9001}
+      CORS_ADMIN_ORIGIN: ${CORS_ADMIN_ORIGIN:-http://localhost:9001}
+      CORS_S3_ORIGIN: ${CORS_S3_ORIGIN:-http://localhost:3000}
+      # Protect via secrets manager in production (never commit the real value).
+      MASTER_ENCRYPTION_KEY: ${MASTER_ENCRYPTION_KEY}
+    volumes:
+      # Production: ensure this host path (or replacement bind) sits on an encrypted volume.
+      - ./lv_s3_data:/data
+    ports:
+      - "${S3_PUBLISH_PORT:-9000}:9000"
+      - "${ADMIN_PUBLISH_PORT:-9001}:9001"
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 2G
+    healthcheck:
+      test: ["CMD-SHELL", "node -e \"require('http').get('http://127.0.0.1:9001/health/ready',r=>process.exit(r.statusCode===200?0:1)).on('error',()=>process.exit(1))\""]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 50s
+    # When using Postgres, uncomment so `api` waits for the DB container:
+    # depends_on:
+    #   postgres:
+    #     condition: service_healthy
+    # When using Redis, also wait for it (merge with postgres depends_on if both are used):
+    #   redis:
+    #     condition: service_healthy
+    # When using ClamAV, also wait for it (merge with postgres/redis depends_on if combined):
+    #   clamav:
+    #     condition: service_healthy
+
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    profiles:
+      - postgres
+    environment:
+      POSTGRES_USER: lvs3
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-lvs3}
+      POSTGRES_DB: lvs3
+    ports:
+      - "${POSTGRES_PUBLISH_PORT:-5432}:5432"
+    volumes:
+      # Production: use an encrypted disk/bind for Postgres data (Compose does not encrypt).
+      - lv_s3_pg:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U lvs3 -d lvs3"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    profiles:
+      - redis
+    ports:
+      - "${REDIS_PUBLISH_PORT:-6379}:6379"
+    volumes:
+      - lv_s3_redis:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+
+  clamav:
+    image: clamav/clamav:1.4
+    restart: unless-stopped
+    profiles:
+      - clamav
+    ports:
+      - "${CLAMAV_PUBLISH_PORT:-3310}:3310"
+    volumes:
+      - lv_s3_clamav:/var/lib/clamav
+    healthcheck:
+      test: ["CMD-SHELL", "clamdscan --ping || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 10
+      start_period: 180s
+
+volumes:
+  lv_s3_pg:
+  lv_s3_redis:
+  lv_s3_clamav:
