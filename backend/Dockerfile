@@ -3,7 +3,7 @@
 
 FROM node:20-bookworm-slim AS frontend-build
 WORKDIR /frontend
-COPY frontend/package.json frontend/package-lock.json* ./
+COPY frontend/package.json frontend/package-lock.json ./
 RUN npm ci
 COPY frontend/ ./
 ARG VITE_ADMIN_API=
@@ -18,7 +18,7 @@ FROM node:20-bookworm-slim AS backend-build
 RUN apt-get update && apt-get install -y --no-install-recommends python3 make g++ \
   && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
-COPY backend/package.json backend/package-lock.json* ./
+COPY backend/package.json backend/package-lock.json ./
 RUN npm ci
 COPY backend/ ./
 RUN npm run build
@@ -31,7 +31,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
   && groupadd -r nodeapp && useradd -r -g nodeapp nodeapp
 WORKDIR /app
 ENV NODE_ENV=production
-COPY backend/package.json backend/package-lock.json* ./
+COPY backend/package.json backend/package-lock.json ./
 RUN npm ci --omit=dev && npm rebuild sqlite3 && npm cache clean --force \
   && apt-get purge -y python3 make g++ && apt-get autoremove -y && rm -rf /var/lib/apt/lists/*
 COPY --from=backend-build /app/dist ./dist

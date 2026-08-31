@@ -1,6 +1,6 @@
 {
   "name": "backend",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Self-hosted S3-compatible object storage with admin API",
   "author": "",
   "private": true,
@@ -38,7 +38,7 @@
     "class-validator": "^0.14.4",
     "cookie-parser": "^1.4.7",
     "helmet": "^8.1.0",
-    "ioredis": "^6.0.0",
+    "ioredis": "^5.8.2",
     "passport": "^0.7.0",
     "passport-jwt": "^4.0.1",
     "pg": "^8.23.0",
