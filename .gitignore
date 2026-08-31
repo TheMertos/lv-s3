@@ -47,8 +47,9 @@ vite.config.ts.timestamp-*.mjs
 # Maven
 target/
 
-# JetBrains IDE
+# JetBrains / VS Code
 .idea/
+.vscode/
 
 # Unit test reports
 TEST*.xml

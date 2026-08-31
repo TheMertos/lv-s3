@@ -30,7 +30,7 @@ export function Logo({ size = 'sm' }: { size?: LogoSize } = {}) {
           alt="LV S3"
           width={px}
           height={px}
-          style={{ objectFit: 'cover', display: 'block' }}
+          style={{ objectFit: 'contain', display: 'block' }}
         />
       </Box>
       <Stack gap={0}>
