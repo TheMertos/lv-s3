@@ -9,7 +9,10 @@ import { ServiceAccountAllowedBuckets1730510000000 } from './migrations/17305100
 import { MultipartBigintSizes1730600000000 } from './migrations/1730600000000-MultipartBigintSizes';
 import { SharedCounters1730700000000 } from './migrations/1730700000000-SharedCounters';
 import { IamPolicies1730800000000 } from './migrations/1730800000000-IamPolicies';
-import { resolveDatabaseOptions } from './config/database-config';
+import {
+  makeSqliteTransactionsSafe,
+  resolveDatabaseOptions,
+} from './config/database-config';
 
 /**
  * Runs TypeORM migrations; app must not start if this throws.
@@ -17,6 +20,7 @@ import { resolveDatabaseOptions } from './config/database-config';
  */
 export async function runMigrations(): Promise<void> {
   const database = resolveDatabaseOptions();
+  if (database.type === 'sqlite') makeSqliteTransactionsSafe();
   const ds = new DataSource({
     ...database,
     synchronize: false,
