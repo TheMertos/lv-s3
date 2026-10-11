@@ -1,6 +1,6 @@
 {
   "name": "backend",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "Self-hosted S3-compatible object storage with admin API",
   "author": "",
   "private": true,
