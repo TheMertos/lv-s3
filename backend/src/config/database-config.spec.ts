@@ -24,6 +24,8 @@ describe('resolveDatabaseOptions', () => {
     expect(resolveDatabaseOptions()).toEqual({
       type: 'sqlite',
       database: './data/app.db',
+      enableWAL: true,
+      busyTimeout: 5000,
     });
   });
 
@@ -34,7 +36,18 @@ describe('resolveDatabaseOptions', () => {
     expect(resolveDatabaseOptions()).toEqual({
       type: 'sqlite',
       database: '/tmp/custom.db',
+      enableWAL: true,
+      busyTimeout: 5000,
     });
+  });
+
+  it('lets SQLite writes wait SQLITE_BUSY_TIMEOUT_MS for the lock, ignoring invalid values', () => {
+    delete process.env.DATABASE_URL;
+    process.env.SQLITE_BUSY_TIMEOUT_MS = '15000';
+    expect(resolveDatabaseOptions()).toMatchObject({ busyTimeout: 15000 });
+
+    process.env.SQLITE_BUSY_TIMEOUT_MS = 'soon';
+    expect(resolveDatabaseOptions()).toMatchObject({ busyTimeout: 5000 });
   });
 
   it('prefers postgres when DATABASE_URL is non-empty even if DATABASE_PATH is set', () => {
