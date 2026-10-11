@@ -517,12 +517,30 @@ function timingSafeEqual(a: string, b: string): boolean {
   }
 }
 
-/** S3 double-encodes except slash */
-function canonicalUriS3(pathname: string): string {
+/**
+ * URI-encodes a value as SigV4 requires (RFC 3986): every byte except `A-Z a-z 0-9 - _ . ~`.
+ * `encodeURIComponent` leaves `! ' ( ) *` as they are, while AWS SDKs and other clients encode them,
+ * so keys such as `photo(1).jpg` would fail signature checks.
+ * @param value - Unencoded value.
+ * @returns The encoded value.
+ */
+export function awsUriEncode(value: string): string {
+  return encodeURIComponent(value).replace(
+    /[!'()*]/g,
+    (c) => `%${c.charCodeAt(0).toString(16).toUpperCase()}`,
+  );
+}
+
+/**
+ * Canonical URI of an S3 request: each path segment decoded once and encoded again, slashes kept.
+ * @param pathname - Request path as received.
+ * @returns The canonical URI.
+ */
+export function canonicalUriS3(pathname: string): string {
   if (!pathname || pathname === '') return '/';
   return pathname
     .split('/')
-    .map((seg) => encodeURIComponent(decodeURIComponent(seg)))
+    .map((seg) => awsUriEncode(decodeURIComponent(seg)))
     .join('/');
 }
 
@@ -531,7 +549,7 @@ function canonicalQueryString(params: URLSearchParams): string {
   const pairs: string[] = [];
   for (const k of keys) {
     for (const v of [...params.getAll(k)].sort()) {
-      pairs.push(`${encodeURIComponent(k)}=${encodeURIComponent(v)}`);
+      pairs.push(`${awsUriEncode(k)}=${awsUriEncode(v)}`);
     }
   }
   return pairs.join('&');
@@ -545,7 +563,7 @@ function canonicalQueryStringPresign(params: URLSearchParams): string {
   const pairs: string[] = [];
   for (const k of keys) {
     for (const v of [...params.getAll(k)].sort()) {
-      pairs.push(`${encodeURIComponent(k)}=${encodeURIComponent(v)}`);
+      pairs.push(`${awsUriEncode(k)}=${awsUriEncode(v)}`);
     }
   }
   return pairs.join('&');

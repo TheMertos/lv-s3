@@ -5,7 +5,11 @@ import { AdminUserEntity } from '../../entities/admin-user.entity';
 import { ServiceAccountEntity } from '../../entities/service-account.entity';
 import { IamPolicyService } from '../iam/iam-policy.service';
 import { StorageService } from '../storage/storage.service';
-import { SigV4Middleware } from './sigv4.middleware';
+import {
+  awsUriEncode,
+  canonicalUriS3,
+  SigV4Middleware,
+} from './sigv4.middleware';
 
 type MockResponse = {
   statusCode: number;
@@ -172,5 +176,22 @@ describe('SigV4Middleware IAM enforce', () => {
     );
     expect(ok).toBe(true);
     expect(authorize).not.toHaveBeenCalled();
+  });
+});
+
+describe('SigV4 canonical encoding', () => {
+  it('encodes every character outside A-Z a-z 0-9 - _ . ~, as AWS SDKs sign them', () => {
+    expect(awsUriEncode("photo(1)!*'.jpg")).toBe('photo%281%29%21%2A%27.jpg');
+    expect(awsUriEncode('a b+c~d_e-f.g')).toBe('a%20b%2Bc~d_e-f.g');
+  });
+
+  it('builds the same canonical URI whether the client escaped parentheses or not', () => {
+    expect(canonicalUriS3('/data/menu/newui_item(L).ozt')).toBe(
+      '/data/menu/newui_item%28L%29.ozt',
+    );
+    expect(canonicalUriS3('/data/menu/newui_item%28L%29.ozt')).toBe(
+      '/data/menu/newui_item%28L%29.ozt',
+    );
+    expect(canonicalUriS3('')).toBe('/');
   });
 });
